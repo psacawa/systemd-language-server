@@ -39,15 +39,29 @@ class UnitType(Enum):
 
 
 class UnitFileSection(Enum):
-    unit = "unit"
-    install = "install"
-    service = "service"
-    socket = "socket"
-    mount = "mount"
-    automount = "automount"
-    swap = "swap"
-    path = "path"
-    timer = "timer"
+    unit = "Unit"
+    install = "Install"
+    service = "Service"
+    socket = "Socket"
+    mount = "Mount"
+    automount = "Automount"
+    swap = "Swap"
+    path = "Path"
+    timer = "Timer"
+
+
+def unit_type_to_unit_file_section(ut: UnitType) -> UnitFileSection | None:
+    try:
+        return UnitFileSection(ut.value.capitalize())
+    except Exception:
+        return None
+
+
+def unit_file_section_to_unit_type(ufs: UnitFileSection) -> UnitType | None:
+    try:
+        return UnitType(ufs.value.lower())
+    except Exception:
+        return None
 
 
 directive_dict = {
@@ -62,13 +76,24 @@ directive_dict = {
 
 
 def get_directives(unit_type: UnitType, section: UnitFileSection | None) -> list[str]:
-    if section is None:
-        return []
+    #  Two variants: i) the current unit file section is known, ii) it isn't (e.g. buffer
+    #  has no section headers yet). If it is, we supply completions value for the unit
+    #  type/section. Otherwise, we supply those valid for all sections.
     if section == UnitFileSection.unit:
         return systemd_unit_directives
     if section == UnitFileSection.install:
         return systemd_install_directives
-    directives = directive_dict[section]
+
+    directives: list[str] = []
+    if section is None:
+        #  if unit type has a corresponding unit file section, add it
+        section_from_type = unit_type_to_unit_file_section(unit_type)
+        if section_from_type is not None:
+            directives += directive_dict[section_from_type]
+        directives += systemd_unit_directives + systemd_install_directives
+    else:
+        directives = directive_dict[section]
+
     if unit_type in [
         UnitType.service,
         UnitType.socket,
@@ -92,7 +117,7 @@ def get_current_section(
         logging.debug(f"{line=} {match=}")
         if match is not None:
             try:
-                section = UnitFileSection(match.group("name").lower())
+                section = UnitFileSection(match.group("name"))
                 return section
             except ValueError:
                 pass
