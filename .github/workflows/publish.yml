@@ -15,7 +15,7 @@ jobs:
         with:
           python-version: 3.11
       - name: Install Poetry
-        run: pip intall poetry
+        run: pip install poetry
       - name: Configure poetry
         env:
           PYPI_TOKEN: ${{ secrets.PYPI_TOKEN }}
