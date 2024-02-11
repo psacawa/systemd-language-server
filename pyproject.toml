@@ -2,8 +2,8 @@
 requires-python = ">=3.8"
 
 [tool.poetry]
-name = 'systemd_language_server'
-version = '0.1.0'
+name = 'systemd-language-server'
+version = '0.2.0'
 description = 'language server for systemd unit files'
 authors = ["Paweł Sacawa <pawel@sacawa.net>"]
 readme = "README.md"
