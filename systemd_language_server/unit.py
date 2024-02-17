@@ -1,12 +1,15 @@
 import re
-from enum import Enum, auto
-from itertools import islice
+from enum import Enum
+from io import StringIO
 import logging
+from glob import glob
+from pathlib import Path
+import subprocess
 
+from lxml import etree  # type: ignore
 from pygls.workspace import TextDocument
-from lsprotocol.types import Position
+from lsprotocol.types import Position, MarkupKind, MarkupContent
 
-SECTION_HEADER_PROG = re.compile(r"^\[(?P<name>\w+)\]$")
 
 from .constants import (
     systemd_unit_directives,
@@ -23,6 +26,18 @@ from .constants import (
     systemd_kill_directives,
 )
 
+#  The ultimate source for information on unit files is the docbook files distributed with
+#  systemd. Therefore, the following data is managed by the language server:
+#  - unit type
+#  - unit file sections
+#  - directives
+#  - directive values
+#  - which docbook (.xml) directives are documented in
+#  Data is resolved at runtime, to the extent possible, therefore docbooks are bundled
+#  with systemd-language-server and parsed as required.
+
+SECTION_HEADER_PROG = re.compile(r"^\[(?P<name>\w+)\]$")
+
 
 class UnitType(Enum):
     service = "service"
@@ -37,6 +52,14 @@ class UnitType(Enum):
     slice = "slice"
     scope = "scope"
 
+    def is_execable(self):
+        return self in [
+            UnitType.service,
+            UnitType.socket,
+            UnitType.mount,
+            UnitType.swap,
+        ]
+
 
 class UnitFileSection(Enum):
     unit = "Unit"
@@ -45,9 +68,26 @@ class UnitFileSection(Enum):
     socket = "Socket"
     mount = "Mount"
     automount = "Automount"
+    scope = "Scope"
     swap = "Swap"
     path = "Path"
     timer = "Timer"
+
+
+_assets_dir = Path(__file__).absolute().parent / "assets"
+docbooks = glob("*.xml", root_dir=_assets_dir)
+
+#  dict mapping docbook documentation file to the list of  systemd unit directives
+#  documented within
+directives = dict()
+
+
+def initialize_directive():
+    for filename in docbooks:
+        docbook_file = _assets_dir / filename
+        tree = etree.parse(open(docbook_file).read())
+        directives[filename] = tree.xpath()
+        #  TODO 10/02/20 psacawa: finish this
 
 
 def unit_type_to_unit_file_section(ut: UnitType) -> UnitFileSection | None:
@@ -72,7 +112,64 @@ directive_dict = {
     UnitFileSection.automount: systemd_automount_directives,
     UnitFileSection.swap: systemd_swap_directives,
     UnitFileSection.path: systemd_path_directives,
+    UnitFileSection.scope: systemd_scope_directives,
 }
+
+
+def convert_to_markdown(raw_varlistentry: bytes):
+    """Use pandoc to convert docbook entry to markdown"""
+    argv = "pandoc --from=docbook --to markdown -".split()
+    proc = subprocess.run(argv, input=raw_varlistentry, stdout=subprocess.PIPE)
+    return proc.stdout.decode()
+
+
+def get_documentation_content(
+    directive: str,
+    unit_type: UnitType,
+    section: UnitFileSection | None,
+    markdown_available=False,
+) -> MarkupContent | None:
+    """Get documentation for unit file directive."""
+    docbooks = get_manual_sections(unit_type, section)
+    for manual in docbooks:
+        filepath = _assets_dir / manual
+        logging.debug(f"{filepath=}")
+        stream = StringIO(open(filepath).read())
+        tree = etree.parse(stream)
+        for varlistentry in tree.xpath("//varlistentry"):
+            directives_in_varlist: list[str] = [
+                varname.text.strip("=")
+                for varname in varlistentry.findall(".//term/varname")
+            ]
+            logging.debug(f"{directive=} {directives_in_varlist}")
+            if directive not in directives_in_varlist:
+                continue
+            logging.info(f"Found {directive=} in {manual=}")
+            raw_varlistentry = etree.tostring(varlistentry)
+            value = bytes()
+            kind: MarkupKind
+            if markdown_available:
+                kind = MarkupKind.Markdown
+                value = convert_to_markdown(raw_varlistentry)
+            else:
+                kind = MarkupKind.PlainText
+                value = "".join((varlistentry.itertext()))
+
+            return MarkupContent(kind=kind, value=value)
+    return None
+
+
+def get_manual_sections(unit_type: UnitType, section: UnitFileSection | None):
+    """Determine which docbook to search for documentation, based on unit type and file
+    section. If no section is provided, search liberally, search liberally."""
+    if section in [UnitFileSection.unit, UnitFileSection.install]:
+        return ["systemd.{}.xml".format(section.value.lower())]
+    ret = ["systemd.{}.xml".format(unit_type.value.lower())]
+    if section is None:
+        ret += ["systemd.unit.xml", "systemd.install.xml"]
+    if unit_type.is_execable():
+        ret += ["systemd.exec.xml", "systemd.kill.xml"]
+    return ret
 
 
 def get_directives(unit_type: UnitType, section: UnitFileSection | None) -> list[str]:
@@ -94,16 +191,13 @@ def get_directives(unit_type: UnitType, section: UnitFileSection | None) -> list
     else:
         directives = directive_dict[section]
 
-    if unit_type in [
-        UnitType.service,
-        UnitType.socket,
-        UnitType.mount,
-        UnitType.swap,
-    ]:
+    if unit_type.is_execable():
         directives += systemd_exec_directives + systemd_kill_directives
     return directives
 
-    return []
+
+def get_unit_type(document):
+    return UnitType(Path(document.uri).suffix.strip("."))
 
 
 def get_current_section(
