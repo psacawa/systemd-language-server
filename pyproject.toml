@@ -1,9 +1,23 @@
 [project]
 requires-python = ">=3.8"
+keywords = ['systemd', 'language', 'server', 'lsp', 'completion']
+readme = "README.md"
+license = {text = "GPL3.0"}
+classifiers = [
+    "Development Status :: 3 - Alpha", "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Topic :: Software Development",
+    "Topic :: Text Editors :: Integrated Development Environments (IDE)", "Topic :: Utilities",
+]
+
+
+[project.urls]
+repository = "https://github.com/psacawa/systemd-language-server"
 
 [tool.poetry]
 name = 'systemd-language-server'
-version = '0.3.0'
+version = '0.3.1'
 description = 'Language server for systemd unit files'
 authors = ["Paweł Sacawa <pawel@sacawa.net>"]
 readme = "README.md"
