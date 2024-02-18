@@ -11,10 +11,13 @@ Completion for
 - unit file directives
 - unit file sections
 <!-- - values of some directives -->
+![](assets/completion.gif)
 
 ### `textDocument/hover`
 
 Documentation for directives supplied on hovering.
+
+![](assets/hover.gif)
 
 ## Installation
 
