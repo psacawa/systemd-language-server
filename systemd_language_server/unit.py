@@ -1,29 +1,28 @@
-import re
-from enum import Enum
-from io import StringIO
 import logging
-from glob import glob
-from pathlib import Path
+import re
 import subprocess
+from enum import Enum
+from glob import glob
+from io import StringIO
+from pathlib import Path
 
+from lsprotocol.types import MarkupContent, MarkupKind, Position
 from lxml import etree  # type: ignore
 from pygls.workspace import TextDocument
-from lsprotocol.types import Position, MarkupKind, MarkupContent
-
 
 from .constants import (
-    systemd_unit_directives,
+    systemd_automount_directives,
+    systemd_exec_directives,
     systemd_install_directives,
+    systemd_kill_directives,
+    systemd_mount_directives,
+    systemd_path_directives,
+    systemd_scope_directives,
     systemd_service_directives,
     systemd_socket_directives,
-    systemd_mount_directives,
-    systemd_automount_directives,
-    systemd_timer_directives,
-    systemd_scope_directives,
     systemd_swap_directives,
-    systemd_path_directives,
-    systemd_exec_directives,
-    systemd_kill_directives,
+    systemd_timer_directives,
+    systemd_unit_directives,
 )
 
 #  The ultimate source for information on unit files is the docbook files distributed with
@@ -133,7 +132,6 @@ def get_documentation_content(
     docbooks = get_manual_sections(unit_type, section)
     for manual in docbooks:
         filepath = _assets_dir / manual
-        logging.debug(f"{filepath=}")
         stream = StringIO(open(filepath).read())
         tree = etree.parse(stream)
         for varlistentry in tree.xpath("//varlistentry"):
@@ -141,10 +139,8 @@ def get_documentation_content(
                 varname.text.strip("=")
                 for varname in varlistentry.findall(".//term/varname")
             ]
-            logging.debug(f"{directive=} {directives_in_varlist}")
             if directive not in directives_in_varlist:
                 continue
-            logging.info(f"Found {directive=} in {manual=}")
             raw_varlistentry = etree.tostring(varlistentry)
             value = bytes()
             kind: MarkupKind
@@ -208,7 +204,6 @@ def get_current_section(
     for i in reversed(range(0, position.line)):
         line = document.lines[i].strip()
         match = SECTION_HEADER_PROG.search(line)
-        logging.debug(f"{line=} {match=}")
         if match is not None:
             try:
                 section = UnitFileSection(match.group("name"))

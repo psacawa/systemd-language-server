@@ -1,47 +1,36 @@
+import logging
+import os.path
 import re
 import sys
 from argparse import ArgumentParser
 from pathlib import Path
-import logging
-import sys
-import os.path
 
-from pygls.server import LanguageServer
-from pygls.workspace import TextDocument
 from lsprotocol.types import (
     INITIALIZE,
     TEXT_DOCUMENT_COMPLETION,
     TEXT_DOCUMENT_HOVER,
-    CompletionParams,
-    CompletionList,
     CompletionItem,
     CompletionItemKind,
+    CompletionList,
     CompletionOptions,
+    CompletionParams,
     Hover,
-    Range,
-    Position,
     HoverParams,
     InitializedParams,
+    Position,
+    Range,
 )
+from pygls.server import LanguageServer
+from pygls.workspace import TextDocument
+
 from .unit import (
+    UnitFileSection,
+    UnitType,
     get_current_section,
-    get_unit_type,
     get_directives,
     get_documentation_content,
-    UnitType,
-    UnitFileSection,
+    get_unit_type,
     unit_type_to_unit_file_section,
-)
-
-
-logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-handler = logging.FileHandler(filename="systemd_language_server.log")
-handler.setLevel(logging.DEBUG)
-logger.addHandler(handler)
-
-logging.basicConfig(
-    filename="systemd_language_server.log", filemode="w", level=logging.DEBUG
 )
 
 
@@ -49,8 +38,8 @@ class SystemdLanguageServer(LanguageServer):
     has_pandoc: bool = False
 
     def __init__(self, *args, **kwargs):
-        has_pandoc = os.path.exists("/bin/pandoc")
         super().__init__(*args, **kwargs)
+        self.has_pandoc = os.path.exists("/bin/pandoc")
 
 
 server = SystemdLanguageServer("systemd-language-server", "v0.1")
@@ -92,7 +81,6 @@ def complete_directive(
     current_line: str,
 ):
     directives = get_directives(unit_type, section)
-    logger.debug(directives)
     items = [
         CompletionItem(label=s, insert_text=s + "=", kind=CompletionItemKind.Property)
         for s in directives
@@ -113,7 +101,6 @@ def textDocument_completion(params: CompletionParams) -> CompletionList | None:
     current_line = document.lines[params.position.line].strip()
     unit_type = get_unit_type(document)
     section = get_current_section(document, params.position)
-    logger.debug(f"{unit_type=} {section=}")
 
     if current_line == "[":
         return complete_unit_file_section(params, unit_type)
