@@ -1,20 +1,3 @@
-[project]
-requires-python = ">=3.8"
-keywords = ['systemd', 'language', 'server', 'lsp', 'completion']
-readme = "README.md"
-license = {text = "GPL3.0"}
-classifiers = [
-    "Development Status :: 3 - Alpha", "Environment :: Console",
-    "Intended Audience :: Developers",
-    "Operating System :: OS Independent",
-    "Topic :: Software Development",
-    "Topic :: Text Editors :: Integrated Development Environments (IDE)", "Topic :: Utilities",
-]
-
-
-[project.urls]
-repository = "https://github.com/psacawa/systemd-language-server"
-
 [tool.poetry]
 name = 'systemd-language-server'
 version = '0.3.3'
@@ -23,6 +6,20 @@ authors = ["Paweł Sacawa <pawel@sacawa.net>"]
 readme = "README.md"
 packages = [{ include = "systemd_language_server" }]
 scripts = { "systemd-language-server" = "systemd_language_server.server:main" }
+keywords = ['systemd', 'language', 'server', 'lsp', 'completion']
+license = "GPL3.0"
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "Operating System :: OS Independent",
+  "Topic :: Software Development",
+  "Topic :: Text Editors :: Integrated Development Environments (IDE)",
+  "Topic :: Utilities",
+]
+
+repository = "https://github.com/psacawa/systemd-language-server"
+
 
 [tool.poetry.dependencies]
 pygls = "^1.3"
