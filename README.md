@@ -1,6 +1,6 @@
 # systemd-language-server
 
-Language server for systemd unit files.
+Language server for systemd unit files. Result of an exercise to learn the language server protocol.
 
 ## Supported Features
 
