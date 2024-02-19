@@ -1,6 +1,6 @@
 [tool.poetry]
 name = 'systemd-language-server'
-version = '0.3.3'
+version = '0.3.4'
 description = 'Language server for systemd unit files'
 authors = ["Paweł Sacawa <pawel@sacawa.net>"]
 readme = "README.md"
