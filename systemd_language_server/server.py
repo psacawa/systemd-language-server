@@ -41,13 +41,55 @@ class SystemdLanguageServer(LanguageServer):
         super().__init__(*args, **kwargs)
         self.has_pandoc = os.path.exists("/bin/pandoc")
 
+        #  perhaps bizarrely, pygls LSP implementation forces dynamic feature registration
+        #  which frustrates a more tradition OOP design
+
+        @self.feature(INITIALIZE)
+        def initialize(params: InitializedParams):
+            pass
+
+        @self.feature(
+            TEXT_DOCUMENT_COMPLETION, CompletionOptions(trigger_characters=["[', '="])
+        )
+        def textDocument_completion(params: CompletionParams) -> CompletionList | None:
+            """Complete systemd unit properties. Determine the required completion type and
+            dispatch it."""
+            items = []
+            uri = params.text_document.uri
+            document = self.workspace.get_text_document(uri)
+            current_line = document.lines[params.position.line].strip()
+            unit_type = get_unit_type(document)
+            section = get_current_section(document, params.position)
+
+            if current_line == "[":
+                return complete_unit_file_section(params, unit_type)
+            elif "=" not in current_line:
+                return complete_directive(params, unit_type, section, current_line)
+            elif len(current_line.split("=")) == 2:
+                return complete_directive_property(
+                    params, unit_type, section, current_line
+                )
+
+        @self.feature(TEXT_DOCUMENT_HOVER)
+        def textDocument_hover(params: HoverParams):
+            """Help for unit file directives."""
+            document = self.workspace.get_document(params.text_document.uri)
+            current_line = document.lines[params.position.line].strip()
+            unit_type = get_unit_type(document)
+            section = get_current_section(document, params.position)
+
+            if "=" in current_line:
+                directive = current_line.split("=")[0]
+                hover_range = range_for_directive(document, params.position)
+                contents = get_documentation_content(
+                    directive, unit_type, section, self.has_pandoc
+                )
+                if contents is None:
+                    return None
+                return Hover(contents=contents, range=hover_range)
+
 
 server = SystemdLanguageServer("systemd-language-server", "v0.1")
-
-
-@server.feature(INITIALIZE)
-def initialize(params: InitializedParams):
-    pass
 
 
 def complete_unit_file_section(params: CompletionParams, unit_type: UnitType):
@@ -89,51 +131,11 @@ def complete_directive(
     return CompletionList(is_incomplete=False, items=items)
 
 
-@server.feature(
-    TEXT_DOCUMENT_COMPLETION, CompletionOptions(trigger_characters=["[', '="])
-)
-def textDocument_completion(params: CompletionParams) -> CompletionList | None:
-    """Complete systemd unit properties. Determine the required completion type and
-    dispatch it."""
-    items = []
-    uri = params.text_document.uri
-    document = server.workspace.get_document(uri)
-    current_line = document.lines[params.position.line].strip()
-    unit_type = get_unit_type(document)
-    section = get_current_section(document, params.position)
-
-    if current_line == "[":
-        return complete_unit_file_section(params, unit_type)
-    elif "=" not in current_line:
-        return complete_directive(params, unit_type, section, current_line)
-    elif len(current_line.split("=")) == 2:
-        return complete_directive_property(params, unit_type, section, current_line)
-
-
 def range_for_directive(document: TextDocument, position: Position) -> Range:
     """Range indicating directive (before =)"""
     current_line = document.lines[position.line].strip()
     idx = current_line.find("=")
     return Range(Position(position.line, 0), Position(position.line, idx - 1))
-
-
-@server.feature(TEXT_DOCUMENT_HOVER)
-def textDocument_hover(params: HoverParams):
-    """Help for unit file directives."""
-    document = server.workspace.get_document(params.text_document.uri)
-    current_line = document.lines[params.position.line].strip()
-    unit_type = get_unit_type(document)
-    section = get_current_section(document, params.position)
-
-    if "=" in current_line:
-        directive = current_line.split("=")[0]
-        hover_range = range_for_directive(document, params.position)
-        contents = get_documentation_content(
-            directive, unit_type, section, server.has_pandoc
-        )
-        if contents is None:
-            return None
-        return Hover(contents=contents, range=hover_range)
 
 
 def get_parser():
