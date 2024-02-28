@@ -1,9 +1,6 @@
-import logging
-import os.path
-import re
+import shutil
 import sys
 from argparse import ArgumentParser
-from pathlib import Path
 
 from lsprotocol.types import (
     INITIALIZE,
@@ -39,7 +36,7 @@ class SystemdLanguageServer(LanguageServer):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.has_pandoc = os.path.exists("/bin/pandoc")
+        self.has_pandoc = shutil.which("pandoc") is not None
 
         #  perhaps bizarrely, pygls LSP implementation forces dynamic feature registration
         #  which frustrates a more tradition OOP design

@@ -21,16 +21,12 @@ from lsprotocol.types import (
     MarkupContent,
     MarkupKind,
     Position,
-    Range,
-    TextDocumentContentChangeEvent,
     TextDocumentContentChangeEvent_Type2,
-    TextDocumentHoverResponse,
     TextDocumentIdentifier,
     TextDocumentItem,
     VersionedTextDocumentIdentifier,
 )
 from pygls.server import LanguageServer
-from pygls.workspace import text_document
 
 from systemd_language_server.server import SystemdLanguageServer
 

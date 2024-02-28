@@ -3,7 +3,7 @@ from threading import Thread
 from typing import Iterable
 
 import pytest
-from lsprotocol.types import EXIT, INITIALIZE, SHUTDOWN, TEXT_DOCUMENT_COMPLETION
+from lsprotocol.types import EXIT, SHUTDOWN
 from pygls.server import LanguageServer
 
 from systemd_language_server.server import SystemdLanguageServer

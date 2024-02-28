@@ -1,4 +1,3 @@
-import logging
 import re
 import subprocess
 from enum import Enum
