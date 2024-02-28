@@ -15,9 +15,11 @@ Completion for
 
 ### `textDocument/hover`
 
-Documentation for directives supplied on hovering.
+Documentation for directives supplied on hovering. 
 
 ![](assets/hover.gif)
+
+For markup in hover windows (i.e. the fancy highlighting), `pandoc` must be found in `$PATH`. Otherwise, there will be fallback to plain text.
 
 ## Installation
 
