@@ -73,7 +73,7 @@ class SystemdLanguageServer(LanguageServer):
         @self.feature(TEXT_DOCUMENT_HOVER)
         def textDocument_hover(params: HoverParams):
             """Help for unit file directives."""
-            document = self.workspace.get_document(params.text_document.uri)
+            document = self.workspace.get_text_document(params.text_document.uri)
             current_line = document.lines[params.position.line].strip()
             unit_type = get_unit_type(document)
             section = get_current_section(document, params.position)
