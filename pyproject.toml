@@ -28,7 +28,6 @@ lxml = "^5.0.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^7"
-pytest-datadir = "^1"
 
 [tool.isort]
 profile = "black"
