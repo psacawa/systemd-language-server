@@ -32,7 +32,7 @@ For markup in hover windows (i.e. the fancy highlighting), `pandoc` must be foun
 pip install systemd-language-server
 ```
 
-## Integrations
+## Example Integrations
 
 ### coc.nvim
 
@@ -46,3 +46,33 @@ In `coc-settings.json`, under `.languageserver`:
 }
 ...
 ```
+
+### nvim-lspconfig
+
+```lua
+local lspconfig = require 'lspconfig'
+local configs = require 'lspconfig.configs'
+
+if not configs.systemd_ls then
+  configs.systemd_ls = {
+    default_config = {
+      cmd = { 'systemd-language-server' },
+      filetypes = { 'systemd' },
+      root_dir = function() return nil end,
+      single_file_support = true,
+      settings = {},
+    },
+    docs = {
+      description = [[
+https://github.com/psacawa/systemd-language-server
+
+Language Server for Systemd unit files.
+]]
+    }
+  }
+end
+
+lspconfig.systemd_ls.setup {}
+```
+
+Courtesy of @ValdezFOmar
