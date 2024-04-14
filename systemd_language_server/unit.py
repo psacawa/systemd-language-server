@@ -158,7 +158,7 @@ def get_manual_sections(unit_type: UnitType, section: UnitFileSection | None):
     """Determine which docbook to search for documentation, based on unit type and file
     section. If no section is provided, search liberally, search liberally."""
     if section in [UnitFileSection.unit, UnitFileSection.install]:
-        return ["systemd.{}.xml".format(section.value.lower())]
+        return ["systemd.unit.xml"]
     ret = ["systemd.{}.xml".format(unit_type.value.lower())]
     if section is None:
         ret += ["systemd.unit.xml", "systemd.install.xml"]
