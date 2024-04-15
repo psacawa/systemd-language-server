@@ -192,7 +192,7 @@ class HoverTestParams:
     text: str
     position: tuple[int, int]
     has_pandoc: bool
-    pattern_contained: str
+    pattern_returned: str | None
 
 
 execstart_hover_markdown_test = HoverTestParams(
@@ -202,17 +202,54 @@ execstart_hover_markdown_test = HoverTestParams(
     True,
     r"Unless `Type=` is `oneshot`",  # from systemd.service.xml,
 )
-execstart_hover_no_pandoc_test = HoverTestParams(
+unit_hover_test = HoverTestParams(
+    "test.service",
+    "[Unit]\nDescription=\n\n",
+    (1, 0),
+    False,
+    r"A short human readable title",  # from systemd.unit.xml,
+)
+service_hover_test = HoverTestParams(
     "test.service",
     "[Service]\nExecStart=\n\n",
     (1, 0),
-    True,
+    False,
     r"Commands that are executed when this service is started.",  # from systemd.service.xml,
+)
+kill_hover_test = HoverTestParams(
+    "test.service",
+    "[Service]\nKillMode=\n\n",
+    (1, 0),
+    False,
+    r"Specifies how processes",  # from systemd.kill.xml,
+)
+install_hover_test = HoverTestParams(
+    "test.service",
+    "[Install]\nWantedBy=\n\n",
+    (1, 0),
+    False,
+    r"This option may be used more than once,",  # from systemd.unit.xml,
+)
+
+fake_directive_hover_test = HoverTestParams(
+    "test.service", "[Install]\nFakeDirective=\n\n", (1, 0), False, None
+)
+wrong_section_hover_test = HoverTestParams(
+    "test.service", "[Install]\nExecStart=\n\n", (1, 0), False, None
 )
 
 
 @pytest.mark.parametrize(
-    "params", [execstart_hover_markdown_test, execstart_hover_no_pandoc_test]
+    "params",
+    [
+        execstart_hover_markdown_test,
+        unit_hover_test,
+        service_hover_test,
+        kill_hover_test,
+        install_hover_test,
+        fake_directive_hover_test,
+        wrong_section_hover_test,
+    ],
 )
 def test_hover(client_server_pair: ClientServerPair, params: HoverTestParams):
     client, server = client_server_pair
@@ -242,9 +279,13 @@ def test_hover(client_server_pair: ClientServerPair, params: HoverTestParams):
         ),
     ).result(timeout=1)
 
+    if params.pattern_returned is None:
+        assert hover is None
+        return
+
     assert isinstance(hover, Hover)
 
     content = hover.contents
     assert isinstance(content, MarkupContent)
     assert (content.kind == MarkupKind.Markdown) == params.has_pandoc
-    assert re.search(params.pattern_contained, content.value) is not None
+    assert re.search(params.pattern_returned, content.value) is not None
