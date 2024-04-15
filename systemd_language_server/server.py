@@ -1,3 +1,5 @@
+import logging
+import os
 import shutil
 import sys
 from argparse import ArgumentParser
@@ -29,6 +31,12 @@ from .unit import (
     get_unit_type,
     unit_type_to_unit_file_section,
 )
+
+logger = logging.getLogger("systemd_language_server")
+handler = logging.StreamHandler(sys.stderr)
+formatter = logging.Formatter("[%(levelname)s] %(message)s")
+handler.setFormatter(formatter)
+logger.addHandler(handler)
 
 
 class SystemdLanguageServer(LanguageServer):
@@ -137,10 +145,28 @@ def range_for_directive(document: TextDocument, position: Position) -> Range:
 
 def get_parser():
     parser = ArgumentParser()
+    parser.add_argument(
+        "--log-level",
+        type=str,
+        default="info",
+        choices=["debug", "info", "warning", "error", "critical"],
+    )
     return parser
 
 
 def main():
     parser = get_parser()
     args = parser.parse_args(sys.argv[1:])
+
+    if args.log_level is not None:
+        pygls_logger = logging.getLogger("pygls.server")
+        pygls_logger.setLevel(args.log_level.upper())
+        logger.setLevel(args.log_level.upper())
+
+    if os.isatty(sys.stdout.fileno()):
+        logger.warning(
+            "systemd-language-server is running from a TTY. "
+            "Usually you want to integrate it to be launched by a text editor."
+        )
+
     server.start_io()
